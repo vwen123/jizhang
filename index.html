@@ -291,7 +291,7 @@
     <div class="modal-btns">
       <button class="btn-close"     onclick="hideExport()">关闭</button>
       <button class="btn-clear-all" onclick="clearAll()">清空</button>
-      <button class="btn-copy"      onclick="copyExport()">复制</button>
+      <button class="btn-copy" id="copyBtn" onclick="copyExport()">复制</button>
     </div>
   </div>
 </div>
@@ -576,14 +576,19 @@
   function hideExport() { document.getElementById('modalBg').classList.remove('show'); }
 
   function copyExport() {
-    navigator.clipboard.writeText(document.getElementById('exportText').value).then(() => {
-      const btn = document.querySelector('.btn-copy');
-      btn.textContent = '已复制 ✓';
-      setTimeout(() => btn.textContent = '复制', 2000);
-    }).catch(() => {
-      document.getElementById('exportText').select();
+    const ta  = document.getElementById('exportText');
+    const btn = document.getElementById('copyBtn');
+    const confirm = () => { btn.textContent = '已复制 ✓'; setTimeout(() => btn.textContent = '复制', 2000); };
+
+    // iOS-friendly: select + execCommand first, clipboard API as backup
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
       document.execCommand('copy');
-    });
+      confirm();
+    } catch(e) {
+      navigator.clipboard.writeText(ta.value).then(confirm).catch(() => alert('请长按文字手动复制'));
+    }
   }
 
   function clearAll() {
