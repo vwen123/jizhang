@@ -263,6 +263,25 @@
   <div id="txList"></div>
 </div>
 
+<!-- Setup modal -->
+<div class="modal-bg" id="setupModal">
+  <div class="modal">
+    <h2>☁️ 云端同步设置</h2>
+    <p>输入一次，数据就会在所有装置同步。资料存在你的手机，不会出现在源码里。</p>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:4px;">Bin ID</div>
+      <input id="setupBin" type="text" placeholder="6a005ecc..." autocomplete="off"
+        style="width:100%;border:1.5px solid #e5e5ea;border-radius:10px;padding:11px 12px;font-size:15px;outline:none;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:4px;">API Key</div>
+      <input id="setupKey" type="password" placeholder="$2a$10$..." autocomplete="off"
+        style="width:100%;border:1.5px solid #e5e5ea;border-radius:10px;padding:11px 12px;font-size:15px;outline:none;">
+    </div>
+    <button class="btn-copy" onclick="saveSetup()">确认</button>
+  </div>
+</div>
+
 <!-- Export modal -->
 <div class="modal-bg" id="modalBg" onclick="bgClick(event)">
   <div class="modal">
@@ -306,9 +325,9 @@
     '其他':'其他',
   };
 
-  const BIN_ID  = '6a005eccc0954111d8016262';
-  const API_KEY = '$2a$10$XJZgTQu1NTBumJK6ilVhsegkJmNJ.x77ggHcJUarpYyvxP1nhPnX.';
-  const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+  let BIN_ID  = localStorage.getItem('ww_bin_id')  || '';
+  let API_KEY = localStorage.getItem('ww_api_key') || '';
+  let API_URL = BIN_ID ? `https://api.jsonbin.io/v3/b/${BIN_ID}` : '';
 
   let txns = JSON.parse(localStorage.getItem('ww_txns') || '[]');
   let editIndex = -1;
@@ -320,8 +339,31 @@
     document.getElementById('subtitle').textContent =
       `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')} · 现金 & TNG`;
     renderList();
-    document.getElementById('mainInput').focus();
+    if (!BIN_ID || !API_KEY) {
+      showSetup();
+    } else {
+      loadFromCloud();
+      document.getElementById('mainInput').focus();
+    }
+  }
+
+  /* ─── Setup modal ─── */
+  function showSetup() {
+    document.getElementById('setupModal').classList.add('show');
+  }
+
+  function saveSetup() {
+    const b = document.getElementById('setupBin').value.trim();
+    const k = document.getElementById('setupKey').value.trim();
+    if (!b || !k) { alert('请填写两个字段'); return; }
+    BIN_ID  = b;
+    API_KEY = k;
+    API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    localStorage.setItem('ww_bin_id',  BIN_ID);
+    localStorage.setItem('ww_api_key', API_KEY);
+    document.getElementById('setupModal').classList.remove('show');
     loadFromCloud();
+    document.getElementById('mainInput').focus();
   }
 
   /* ─── Cloud sync ─── */
