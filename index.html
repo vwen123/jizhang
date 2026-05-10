@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="记账">
+  <title>记账</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, 'PingFang SC', sans-serif;
+      background: #f2f2f7;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background: white;
+      padding: 54px 20px 14px;
+      border-bottom: 1px solid #e5e5ea;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-left h1 { font-size: 22px; font-weight: 700; color: #1c1c1e; }
+    .header-left .subtitle { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+
+    .export-btn {
+      background: #007aff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Input card */
+    .input-card {
+      background: white;
+      margin: 16px;
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .main-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 17px;
+      color: #1c1c1e;
+      font-family: -apple-system, 'PingFang SC', sans-serif;
+      background: transparent;
+    }
+
+    .main-input::placeholder { color: #c7c7cc; }
+
+    .add-btn {
+      background: #007aff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #aeaeb2;
+      line-height: 1.6;
+    }
+
+    .hint span {
+      display: inline-block;
+      background: #f2f2f7;
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin: 1px 2px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+    }
+
+    /* Error toast */
+    .toast {
+      position: fixed;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff3b30;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; }
+
+    /* List */
+    .list-wrap { margin: 0 16px; }
+
+    .section-title {
+      font-size: 13px;
+      color: #8e8e93;
+      padding: 4px 4px 8px;
+      font-weight: 500;
+    }
+
+    .tx-card {
+      background: white;
+      border-radius: 14px;
+      padding: 13px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .tx-card.incomplete { border-left: 3px solid #ff9500; }
+
+    .tx-desc { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+    .tx-meta { font-size: 12px; color: #8e8e93; margin-top: 3px; }
+    .tx-meta .missing { color: #ff3b30; }
+
+    .tx-right { text-align: right; flex-shrink: 0; margin-left: 10px; }
+    .tx-amount { font-size: 17px; font-weight: 700; color: #ff3b30; }
+    .tx-del { font-size: 11px; color: #c7c7cc; cursor: pointer; margin-top: 4px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px 0;
+      color: #c7c7cc;
+      font-size: 15px;
+    }
+
+    /* Export modal */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+    }
+
+    .modal-bg.show { display: flex; }
+
+    .modal {
+      background: white;
+      width: 100%;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 44px;
+    }
+
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .modal p { font-size: 13px; color: #8e8e93; margin-bottom: 14px; line-height: 1.5; }
+
+    .modal textarea {
+      width: 100%;
+      height: 200px;
+      border: 1.5px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: #3a3a3c;
+      resize: none;
+      line-height: 1.6;
+    }
+
+    .modal-btns { display: flex; gap: 10px; margin-top: 14px; }
+
+    .btn-copy {
+      flex: 1;
+      background: #007aff;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-clear-all {
+      background: #ff3b30;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 15px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-close {
+      background: #f2f2f7;
+      color: #8e8e93;
+      border: none;
+      border-radius: 14px;
+      padding: 15px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>记账</h1>
+    <div class="subtitle" id="subtitle"></div>
+  </div>
+  <button class="export-btn" onclick="showExport()">导出 📋</button>
+</header>
+
+<div class="input-card">
+  <div class="input-row">
+    <input class="main-input" id="mainInput" type="text"
+      placeholder="描述 金额 TNG/现金 类别 个人/家庭"
+      autocomplete="off" autocorrect="off" autocapitalize="off"
+      onkeydown="if(event.key==='Enter') addEntry()">
+    <button class="add-btn" onclick="addEntry()">+</button>
+  </div>
+  <div class="hint">
+    例：午餐 15.50 TNG 饮食 个人<br>
+    类别：<span>饮食</span><span>交通</span><span>购物</span><span>医疗</span><span>教育</span><span>其他</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="list-wrap">
+  <div class="section-title" id="listTitle"></div>
+  <div id="txList"></div>
+</div>
+
+<!-- Export modal -->
+<div class="modal-bg" id="modalBg" onclick="bgClick(event)">
+  <div class="modal">
+    <h2>导出记录</h2>
+    <p>复制以下内容，月底连同 PDF 账单一起发给 Claude 处理</p>
+    <textarea id="exportText" readonly></textarea>
+    <div class="modal-btns">
+      <button class="btn-close"     onclick="hideExport()">关闭</button>
+      <button class="btn-clear-all" onclick="clearAll()">清空</button>
+      <button class="btn-copy"      onclick="copyExport()">复制</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const catLabel = { food:'饮食', transport:'交通', shopping:'购物', medical:'医疗', education:'教育', other:'其他' };
+  const catAlias = {
+    '饮食':'food','吃':'food','食物':'food','早餐':'food','午餐':'food','晚餐':'food','宵夜':'food','餐':'food',
+    '交通':'transport','油费':'transport','汽油':'transport','停车':'transport',
+    '购物':'shopping','买':'shopping',
+    '医疗':'medical','医':'medical','药':'medical','诊所':'medical','中医':'medical',
+    '教育':'education','补习':'education','课':'education','培训':'education',
+    '其他':'other',
+  };
+
+  let txns = JSON.parse(localStorage.getItem('ww_txns') || '[]');
+
+  init();
+
+  function init() {
+    const now = new Date();
+    document.getElementById('subtitle').textContent =
+      `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')} · 现金 & TNG`;
+    renderList();
+    document.getElementById('mainInput').focus();
+  }
+
+  /* ─── Parse & Add ─── */
+  function addEntry() {
+    const raw = document.getElementById('mainInput').value.trim();
+    if (!raw) return;
+
+    const entry = parse(raw);
+
+    // Must have at least description and amount
+    if (!entry.description && entry.amount == null) {
+      showToast('请输入描述和金额');
+      return;
+    }
+
+    txns.push({ ...entry, date: new Date().toISOString() });
+    persist();
+    renderList();
+    document.getElementById('mainInput').value = '';
+    document.getElementById('mainInput').focus();
+  }
+
+  function parse(text) {
+    let s = text;
+
+    // Amount: first number found
+    const amtM = s.match(/(\d+(?:[.,]\d+)?)/);
+    const amount = amtM ? parseFloat(amtM[1].replace(',', '.')) : null;
+    if (amtM) s = s.replace(amtM[0], ' ');
+
+    // Payment method
+    let paymentMethod = null;
+    if (/tng|touch/i.test(s)) { paymentMethod = 'TNG'; s = s.replace(/tng|touch[\w\s']*go/gi, ' '); }
+    else if (/现金|cash/i.test(s)) { paymentMethod = '现金'; s = s.replace(/现金|cash/gi, ' '); }
+
+    // Category — match Chinese or English
+    let category = null;
+    const catKeys = Object.keys(catAlias).sort((a,b) => b.length - a.length);
+    for (const key of catKeys) {
+      if (s.includes(key)) { category = catAlias[key]; s = s.replace(key, ' '); break; }
+    }
+    if (!category) {
+      const catMap = [
+        [/food/i,'food'],[/transport/i,'transport'],[/shopping/i,'shopping'],
+        [/medical/i,'medical'],[/education/i,'education'],[/other/i,'other'],
+      ];
+      for (const [rx, val] of catMap) {
+        if (rx.test(s)) { category = val; s = s.replace(rx, ' '); break; }
+      }
+    }
+
+    // Classify
+    let classify = null;
+    if (/家庭/i.test(s)) { classify = '家庭'; s = s.replace(/家庭/gi, ' '); }
+    else if (/个人/i.test(s)) { classify = '个人'; s = s.replace(/个人/gi, ' '); }
+
+    // Remaining = description
+    const description = s.replace(/\s{2,}/g, ' ').trim();
+
+    return { description, amount, paymentMethod, category, classify };
+  }
+
+  /* ─── List ─── */
+  function renderList() {
+    const list  = document.getElementById('txList');
+    const title = document.getElementById('listTitle');
+
+    if (!txns.length) {
+      list.innerHTML = '<div class="empty-state">还没有记录</div>';
+      title.textContent = '';
+      return;
+    }
+
+    title.textContent = `本月记录 ${txns.length} 笔`;
+
+    list.innerHTML = [...txns].reverse().map((tx, ri) => {
+      const i   = txns.length - 1 - ri;
+      const d   = new Date(tx.date);
+      const ds  = `${d.getMonth()+1}/${d.getDate()}`;
+      const cat = tx.category ? (catLabel[tx.category] || tx.category) : null;
+
+      const incomplete = !tx.paymentMethod || !tx.category || !tx.classify;
+
+      const metaParts = [
+        ds,
+        tx.paymentMethod ? tx.paymentMethod : '<span class="missing">付款方式?</span>',
+        cat              ? cat              : '<span class="missing">类别?</span>',
+        tx.classify      ? tx.classify      : '<span class="missing">个人/家庭?</span>',
+      ];
+
+      return `<div class="tx-card${incomplete ? ' incomplete' : ''}">
+        <div>
+          <div class="tx-desc">${tx.description || '（无描述）'}</div>
+          <div class="tx-meta">${metaParts.join(' · ')}</div>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amount">RM ${tx.amount != null ? tx.amount.toFixed(2) : '?'}</div>
+          <div class="tx-del" onclick="deleteTx(${i})">删除</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function deleteTx(i) {
+    if (!confirm('删除这笔记录？')) return;
+    txns.splice(i, 1);
+    persist();
+    renderList();
+  }
+
+  function persist() { localStorage.setItem('ww_txns', JSON.stringify(txns)); }
+
+  /* ─── Toast ─── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  /* ─── Export ─── */
+  function showExport() {
+    if (!txns.length) { alert('还没有记录'); return; }
+
+    const now   = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    const lines = [
+      `【现金/TNG 手动记录】${month}`,
+      '| 日期 | 描述 | 金额(RM) | 付款方式 | 类别 | 分类 | 收支 | 备注 |',
+      '|------|------|---------|---------|------|------|------|------|',
+      ...txns.map(tx => {
+        const d  = new Date(tx.date);
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const amt = tx.amount != null ? tx.amount.toFixed(2) : '?';
+        return `| ${ds} | ${tx.description || ''} | ${amt} | ${tx.paymentMethod || ''} | ${tx.category || ''} | ${tx.classify || ''} | 支出 | |`;
+      })
+    ];
+
+    document.getElementById('exportText').value = lines.join('\n');
+    document.getElementById('modalBg').classList.add('show');
+  }
+
+  function bgClick(e) { if (e.target === document.getElementById('modalBg')) hideExport(); }
+  function hideExport() { document.getElementById('modalBg').classList.remove('show'); }
+
+  function copyExport() {
+    navigator.clipboard.writeText(document.getElementById('exportText').value).then(() => {
+      const btn = document.querySelector('.btn-copy');
+      btn.textContent = '已复制 ✓';
+      setTimeout(() => btn.textContent = '复制', 2000);
+    }).catch(() => {
+      document.getElementById('exportText').select();
+      document.execCommand('copy');
+    });
+  }
+
+  function clearAll() {
+    if (!confirm(`删除全部 ${txns.length} 笔记录？此操作无法恢复`)) return;
+    txns = [];
+    persist();
+    renderList();
+    hideExport();
+  }
+</script>
+</body>
+</html>
