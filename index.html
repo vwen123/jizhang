@@ -246,7 +246,8 @@
       placeholder="描述 金额 TNG/现金 类别 个人/家庭"
       autocomplete="off" autocorrect="off" autocapitalize="off"
       onkeydown="if(event.key==='Enter') addEntry()">
-    <button class="add-btn" onclick="addEntry()">+</button>
+    <button class="add-btn" id="cancelBtn" onclick="cancelEdit()" style="display:none;background:#ff9500;">✕</button>
+    <button class="add-btn" id="addBtn" onclick="addEntry()">+</button>
   </div>
   <div class="hint">
     例：午餐 15.50 TNG 饮食 个人<br>
@@ -305,6 +306,7 @@
   };
 
   let txns = JSON.parse(localStorage.getItem('ww_txns') || '[]');
+  let editIndex = -1;
 
   init();
 
@@ -316,23 +318,56 @@
     document.getElementById('mainInput').focus();
   }
 
-  /* ─── Parse & Add ─── */
+  /* ─── Parse & Add / Save Edit ─── */
   function addEntry() {
     const raw = document.getElementById('mainInput').value.trim();
     if (!raw) return;
 
     const entry = parse(raw);
 
-    // Must have at least description and amount
     if (!entry.description && entry.amount == null) {
       showToast('请输入描述和金额');
       return;
     }
 
-    txns.push({ ...entry, date: new Date().toISOString() });
+    if (editIndex >= 0) {
+      txns[editIndex] = { ...txns[editIndex], ...entry };
+      editIndex = -1;
+      document.getElementById('addBtn').textContent = '+';
+      document.getElementById('cancelBtn').style.display = 'none';
+    } else {
+      txns.push({ ...entry, date: new Date().toISOString() });
+    }
+
     persist();
     renderList();
     document.getElementById('mainInput').value = '';
+    document.getElementById('mainInput').focus();
+  }
+
+  function editTx(i) {
+    const tx = txns[i];
+    const parts = [
+      tx.description,
+      tx.amount != null ? tx.amount : '',
+      tx.paymentMethod,
+      tx.category,
+      tx.classify,
+    ].filter(Boolean).join(' ');
+
+    document.getElementById('mainInput').value = parts;
+    document.getElementById('mainInput').focus();
+    editIndex = i;
+    document.getElementById('addBtn').textContent = '✓';
+    document.getElementById('cancelBtn').style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    editIndex = -1;
+    document.getElementById('mainInput').value = '';
+    document.getElementById('addBtn').textContent = '+';
+    document.getElementById('cancelBtn').style.display = 'none';
     document.getElementById('mainInput').focus();
   }
 
@@ -402,7 +437,10 @@
         </div>
         <div class="tx-right">
           <div class="tx-amount">RM ${tx.amount != null ? tx.amount.toFixed(2) : '?'}</div>
-          <div class="tx-del" onclick="deleteTx(${i})">删除</div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+            <span class="tx-del" onclick="editTx(${i})">编辑</span>
+            <span class="tx-del" onclick="deleteTx(${i})">删除</span>
+          </div>
         </div>
       </div>`;
     }).join('');
