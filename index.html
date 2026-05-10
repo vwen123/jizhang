@@ -250,7 +250,7 @@
   </div>
   <div class="hint">
     例：午餐 15.50 TNG 饮食 个人<br>
-    类别：<span>饮食</span><span>交通</span><span>购物</span><span>医疗</span><span>教育</span><span>其他</span>
+    类别：<span>饮食</span><span>交通</span><span>购物</span><span>医疗</span><span>教育</span><span>水电</span><span>美容</span><span>课程</span><span>娱乐</span><span>其他</span><span>内部转账</span>
   </div>
 </div>
 
@@ -276,14 +276,32 @@
 </div>
 
 <script>
-  const catLabel = { food:'饮食', transport:'交通', shopping:'购物', medical:'医疗', education:'教育', other:'其他' };
+  // Categories match Google Sheets dropdown exactly
+  const CATS = ['饮食','交通','购物','医疗','教育','水电','美容','课程','娱乐','其他','内部转账'];
+
   const catAlias = {
-    '饮食':'food','吃':'food','食物':'food','早餐':'food','午餐':'food','晚餐':'food','宵夜':'food','餐':'food',
-    '交通':'transport','油费':'transport','汽油':'transport','停车':'transport',
-    '购物':'shopping','买':'shopping',
-    '医疗':'medical','医':'medical','药':'medical','诊所':'medical','中医':'medical',
-    '教育':'education','补习':'education','课':'education','培训':'education',
-    '其他':'other',
+    // 饮食
+    '饮食':'饮食','食物':'饮食','吃饭':'饮食','早餐':'饮食','午餐':'饮食','晚餐':'饮食','宵夜':'饮食','餐':'饮食','吃':'饮食',
+    // 交通
+    '交通':'交通','油费':'交通','汽油':'交通','停车':'交通',
+    // 购物
+    '购物':'购物','买':'购物',
+    // 医疗
+    '医疗':'医疗','医生':'医疗','买药':'医疗','诊所':'医疗','中医':'医疗','药':'医疗',
+    // 教育
+    '教育':'教育','补习':'教育','培训':'教育',
+    // 水电
+    '水电':'水电','电费':'水电','水费':'水电',
+    // 美容
+    '美容':'美容','facial':'美容','护肤':'美容',
+    // 课程
+    '课程':'课程',
+    // 娱乐
+    '娱乐':'娱乐','电影':'娱乐',
+    // 内部转账
+    '内部转账':'内部转账','转账':'内部转账',
+    // 其他（最后匹配）
+    '其他':'其他',
   };
 
   let txns = JSON.parse(localStorage.getItem('ww_txns') || '[]');
@@ -331,20 +349,11 @@
     if (/tng|touch/i.test(s)) { paymentMethod = 'TNG'; s = s.replace(/tng|touch[\w\s']*go/gi, ' '); }
     else if (/现金|cash/i.test(s)) { paymentMethod = '现金'; s = s.replace(/现金|cash/gi, ' '); }
 
-    // Category — match Chinese or English
+    // Category — longest match first
     let category = null;
     const catKeys = Object.keys(catAlias).sort((a,b) => b.length - a.length);
     for (const key of catKeys) {
       if (s.includes(key)) { category = catAlias[key]; s = s.replace(key, ' '); break; }
-    }
-    if (!category) {
-      const catMap = [
-        [/food/i,'food'],[/transport/i,'transport'],[/shopping/i,'shopping'],
-        [/medical/i,'medical'],[/education/i,'education'],[/other/i,'other'],
-      ];
-      for (const [rx, val] of catMap) {
-        if (rx.test(s)) { category = val; s = s.replace(rx, ' '); break; }
-      }
     }
 
     // Classify
@@ -375,7 +384,7 @@
       const i   = txns.length - 1 - ri;
       const d   = new Date(tx.date);
       const ds  = `${d.getMonth()+1}/${d.getDate()}`;
-      const cat = tx.category ? (catLabel[tx.category] || tx.category) : null;
+      const cat = tx.category || null;
 
       const incomplete = !tx.paymentMethod || !tx.category || !tx.classify;
 
