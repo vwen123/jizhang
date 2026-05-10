@@ -236,6 +236,7 @@
   <div class="header-left">
     <h1>记账</h1>
     <div class="subtitle" id="subtitle"></div>
+    <div style="font-size:11px;color:#aeaeb2;margin-top:2px;" id="syncStatus"></div>
   </div>
   <button class="export-btn" onclick="showExport()">导出 📋</button>
 </header>
@@ -305,6 +306,10 @@
     '其他':'其他',
   };
 
+  const BIN_ID  = '6a005eccc0954111d8016262';
+  const API_KEY = '$2a$10$XJZgTQu1NTBumJK6ilVhsegkJmNJ.x77ggHcJUarpYyvxP1nhPnX.';
+  const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
   let txns = JSON.parse(localStorage.getItem('ww_txns') || '[]');
   let editIndex = -1;
 
@@ -316,6 +321,42 @@
       `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')} · 现金 & TNG`;
     renderList();
     document.getElementById('mainInput').focus();
+    loadFromCloud();
+  }
+
+  /* ─── Cloud sync ─── */
+  function setSyncStatus(state) {
+    const el = document.getElementById('syncStatus');
+    const map = { syncing:'⏳ 同步中…', ok:'☁️ 已同步', err:'⚠️ 离线' };
+    el.textContent = map[state] || '';
+  }
+
+  async function loadFromCloud() {
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(API_URL, { headers: { 'X-Master-Key': API_KEY } });
+      const data = await res.json();
+      txns = data.record.txns || [];
+      localStorage.setItem('ww_txns', JSON.stringify(txns));
+      renderList();
+      setSyncStatus('ok');
+    } catch(e) {
+      setSyncStatus('err');
+    }
+  }
+
+  async function saveToCloud() {
+    setSyncStatus('syncing');
+    try {
+      await fetch(API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+        body: JSON.stringify({ txns })
+      });
+      setSyncStatus('ok');
+    } catch(e) {
+      setSyncStatus('err');
+    }
   }
 
   /* ─── Parse & Add / Save Edit ─── */
@@ -453,7 +494,10 @@
     renderList();
   }
 
-  function persist() { localStorage.setItem('ww_txns', JSON.stringify(txns)); }
+  function persist() {
+    localStorage.setItem('ww_txns', JSON.stringify(txns));
+    saveToCloud();
+  }
 
   /* ─── Toast ─── */
   function showToast(msg) {
